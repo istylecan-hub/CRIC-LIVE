@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useAppStore } from '../store';
-import { Home, Share2 } from 'lucide-react';
+import { Home, Share2, Download } from 'lucide-react';
 import { Match } from '../types';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 export default function Result({ onBackHome }: { onBackHome: () => void }) {
   const activeMatch = useAppStore(s => s.activeMatch);
@@ -47,12 +49,144 @@ export default function Result({ onBackHome }: { onBackHome: () => void }) {
 
   const winnerName = matchData.result?.winnerId === matchData.teamA.id ? matchData.teamA.name : matchData.teamB.name;
   
+  const exportToPDF = () => {
+    if (!matchData) return;
+    const doc = new jsPDF();
+    
+    let yPos = 20;
+
+    doc.setFontSize(20);
+    doc.text('MATCH RESULT', 14, yPos);
+    yPos += 10;
+    
+    doc.setFontSize(14);
+    if (matchData.result?.isDraw) {
+        doc.text('Match Drawn', 14, yPos);
+    } else {
+        const winner = matchData.result?.winnerId === matchData.teamA.id ? matchData.teamA.name : matchData.teamB.name;
+        doc.text(`${winner} won by ${matchData.result?.margin} ${matchData.result?.marginType}`, 14, yPos);
+    }
+    yPos += 15;
+
+    matchData.innings.forEach((inn, idx) => {
+        const battingTeam = inn.battingTeamId === matchData.teamA.id ? matchData.teamA : matchData.teamB;
+        
+        doc.setFontSize(16);
+        doc.text(`${battingTeam.name} Innings - ${inn.totalRuns}/${inn.totalWickets} (${Math.floor(inn.totalBalls/6)}.${inn.totalBalls%6} Ov)`, 14, yPos);
+        yPos += 5;
+
+        // Batting
+        const batBody = Object.values(inn.batsmen as Record<string, any>).map(bat => [
+            bat.name + (bat.isOut ? ` (${bat.outType})` : ' (not out)'),
+            bat.runs.toString(),
+            bat.balls.toString(),
+            bat.fours.toString(),
+            bat.sixes.toString(),
+            bat.balls > 0 ? ((bat.runs/bat.balls)*100).toFixed(1) : '-'
+        ]);
+
+        autoTable(doc, {
+            startY: yPos,
+            head: [['Batter', 'R', 'B', '4s', '6s', 'SR']],
+            body: batBody,
+            theme: 'grid',
+            headStyles: { fillColor: [234, 88, 12] },
+        });
+
+        yPos = (doc as any).lastAutoTable.finalY + 10;
+
+        // Bowling 
+        const bowlBody = Object.values(inn.bowlers as Record<string, any>).map(bowl => [
+            bowl.name,
+            `${Math.floor(bowl.balls/6)}.${bowl.balls%6}`,
+            bowl.maidens.toString(),
+            bowl.runs.toString(),
+            bowl.wickets.toString(),
+            bowl.balls > 0 ? (bowl.runs / (bowl.balls/6)).toFixed(1) : '-'
+        ]);
+
+        autoTable(doc, {
+            startY: yPos,
+            head: [['Bowler', 'O', 'M', 'R', 'W', 'ECON']],
+            body: bowlBody,
+            theme: 'grid',
+            headStyles: { fillColor: [234, 88, 12] },
+        });
+
+        yPos = (doc as any).lastAutoTable.finalY + 15;
+
+        // Ball by ball details
+        doc.setFontSize(14);
+        doc.text('Ball by Ball', 14, yPos);
+        yPos += 5;
+
+        // group balls by over
+        const oversInfo: Record<number, any[]> = {};
+        inn.balls.forEach(ball => {
+            if (!oversInfo[ball.over]) oversInfo[ball.over] = [];
+            oversInfo[ball.over].push(ball);
+        });
+
+        const bbbBody: any[] = [];
+        Object.keys(oversInfo).sort((a,b) => parseInt(a)-parseInt(b)).forEach(overStr => {
+           const o = parseInt(overStr);
+           const balls = oversInfo[o];
+           // build a string of events
+           const events = balls.map(b => {
+              if (b.isWicket) {
+                 return b.wicketType && b.wicketType.toLowerCase() === 'run out' ? 'W(RO)' : 'W';
+              }
+              let str = b.runs.toString();
+              if (b.isWide) str += 'wd';
+              if (b.isNoBall) str += 'nb';
+              if (b.isLegBye) str += 'lb';
+              if (b.isBye) str += 'b';
+              return str;
+           }).join(' ');
+
+           // find bowler for this over
+           const bowlerName = balls[0] && inn.bowlers[balls[0].bowlerId] ? inn.bowlers[balls[0].bowlerId].name : 'Unknown';
+
+           // calculate over total runs
+           const overRuns = balls.reduce((acc, b) => acc + (b.runs || 0) + (b.extras || 0), 0);
+
+           bbbBody.push([
+              `Over ${o + 1}`,
+              bowlerName,
+              events,
+              overRuns.toString()
+           ]);
+        });
+
+        if (bbbBody.length > 0) {
+            autoTable(doc, {
+                startY: yPos,
+                head: [['Over', 'Bowler', 'Events', 'Runs']],
+                body: bbbBody,
+                theme: 'striped',
+                headStyles: { fillColor: [50, 50, 50] },
+            });
+            yPos = (doc as any).lastAutoTable.finalY + 15;
+        }
+
+        if (idx === 0 && matchData.innings.length > 1) {
+           doc.addPage();
+           yPos = 20;
+        }
+    });
+
+    doc.save(`${matchData.teamA.name}_vs_${matchData.teamB.name}_Scorecard.pdf`);
+  };
+
   return (
     <div className="flex flex-col h-full bg-[#0a0a0a]">
-      <div className="flex items-center gap-4 p-6 border-b border-zinc-800 bg-zinc-950 sticky top-0 z-10 justify-between">
+      <div className="flex flex-wrap items-center gap-4 p-6 border-b border-zinc-800 bg-zinc-950 sticky top-0 z-10 justify-between">
         <h2 className="text-xl font-bold uppercase tracking-wider text-zinc-100">MATCH RESULT</h2>
         <div className="flex gap-4">
-           <button className="flex items-center gap-2 px-6 py-2 border border-zinc-800 rounded-full font-bold hover:bg-zinc-900 text-sm text-zinc-300 transition-colors">
+           <button onClick={exportToPDF} className="flex items-center gap-2 px-6 py-2 border border-blue-800 bg-blue-900/30 rounded-full font-bold hover:bg-blue-800/50 text-sm text-blue-300 transition-colors">
+             <Download size={16} /> EXPORT PDF
+           </button>
+           <button className="flex items-center gap-2 px-6 py-2 border border-zinc-800 rounded-full font-bold hover:bg-zinc-900 text-sm text-zinc-300 transition-colors hidden sm:flex">
              <Share2 size={16} /> SHARE
            </button>
            <button onClick={onBackHome} className="flex items-center gap-2 px-6 py-2 bg-orange-600 rounded-full text-white font-bold hover:bg-orange-500 text-sm shadow-[0_4px_20px_rgba(234,88,12,0.3)] transition-colors">
