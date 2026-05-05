@@ -1,0 +1,6 @@
+{
+  "name": "Cricket Scorer BY GY",
+  "description": "Cricket scoring + recording app that runs as an installable PWA. Allows video recording of the match with live scoreboard burned in.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": []
+}
