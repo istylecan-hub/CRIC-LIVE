@@ -5,6 +5,7 @@ import VideoCompositor from '../components/VideoCompositor';
 import ScoringControls from '../components/ScoringControls';
 import ScoreboardPane from '../components/ScoreboardPane';
 import SelectionModal from '../components/SelectionModal';
+import * as idb from 'idb-keyval';
 
 export default function RecordingScoringScreen() {
   const activeMatch = useAppStore(s => s.activeMatch);
@@ -20,6 +21,25 @@ export default function RecordingScoringScreen() {
   const [needsStriker, setNeedsStriker] = useState(!inn.currentStrikerId);
   const [needsNonStriker, setNeedsNonStriker] = useState(!inn.currentNonStrikerId);
   const [needsBowler, setNeedsBowler] = useState(!inn.currentBowlerId);
+
+  const [isAutoSaving, setIsAutoSaving] = useState(false);
+  const matchRef = useRef(activeMatch);
+
+  useEffect(() => {
+    matchRef.current = activeMatch;
+  }, [activeMatch]);
+
+  useEffect(() => {
+    const intervalId = setInterval(async () => {
+      if (matchRef.current) {
+        setIsAutoSaving(true);
+        await idb.set('activeMatch', matchRef.current);
+        // Show indicator for at least 1.5 seconds so it's visible
+        setTimeout(() => setIsAutoSaving(false), 1500);
+      }
+    }, 30000);
+    return () => clearInterval(intervalId);
+  }, []);
 
   const availableBatsmen = battingTeam.players.filter(p => p.id !== inn.currentStrikerId && p.id !== inn.currentNonStrikerId && !inn.batsmen[p.id]?.isOut);
   const availableBowlers = bowlingTeam.players.filter(p => p.id !== inn.currentBowlerId);
@@ -79,9 +99,14 @@ export default function RecordingScoringScreen() {
       
       {/* HEADER */}
       <header className="h-14 border-b border-zinc-800 flex items-center justify-between px-6 bg-zinc-900/50 flex-shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="w-2 h-2 rounded-full bg-red-600 animate-pulse"></div>
-          <span className="font-mono text-sm tracking-widest text-zinc-300">LIVE</span>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-2 h-2 rounded-full bg-red-600 animate-pulse"></div>
+            <span className="font-mono text-sm tracking-widest text-zinc-300">LIVE</span>
+          </div>
+          {isAutoSaving && (
+            <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest animate-pulse delay-75">Saving...</span>
+          )}
         </div>
         <div>
           <span className="text-zinc-500 font-bold text-[10px] uppercase tracking-widest">CRICKET SCORER GY</span>
