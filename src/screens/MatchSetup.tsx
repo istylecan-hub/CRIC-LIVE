@@ -1,14 +1,20 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useAppStore } from '../store';
 import { v4 as uuidv4 } from 'uuid';
-import { ArrowLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Upload } from 'lucide-react';
 import { MatchFormat, MatchMode } from '../types';
 
 export default function MatchSetup({ onBack }: { onBack: () => void }) {
   const startMatch = useAppStore(s => s.startMatch);
 
   const [teamAName, setTeamAName] = useState('Team A');
+  const [teamAColor, setTeamAColor] = useState('#ea580c');
+  const [teamALogo, setTeamALogo] = useState<string | undefined>();
+  
   const [teamBName, setTeamBName] = useState('Team B');
+  const [teamBColor, setTeamBColor] = useState('#3b82f6');
+  const [teamBLogo, setTeamBLogo] = useState<string | undefined>();
+  
   const [overs, setOvers] = useState<MatchFormat>(10);
   const [mode, setMode] = useState<MatchMode>('full');
   const [tossWinner, setTossWinner] = useState<'A' | 'B'>('A');
@@ -17,12 +23,26 @@ export default function MatchSetup({ onBack }: { onBack: () => void }) {
   const teamAId = 'team-a-' + uuidv4().slice(0, 8);
   const teamBId = 'team-b-' + uuidv4().slice(0, 8);
 
+  const fileInputARef = useRef<HTMLInputElement>(null);
+  const fileInputBRef = useRef<HTMLInputElement>(null);
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, setLogo: (l: string) => void) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setLogo(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleNext = () => {
     if (!teamAName.trim() || !teamBName.trim()) return;
     
     startMatch({
-      teamA: { id: teamAId, name: teamAName.trim(), players: [] },
-      teamB: { id: teamBId, name: teamBName.trim(), players: [] },
+      teamA: { id: teamAId, name: teamAName.trim(), players: [], color: teamAColor, logoDataUrl: teamALogo },
+      teamB: { id: teamBId, name: teamBName.trim(), players: [], color: teamBColor, logoDataUrl: teamBLogo },
       overs,
       mode,
       toss: {
@@ -44,24 +64,81 @@ export default function MatchSetup({ onBack }: { onBack: () => void }) {
       <div className="flex-1 overflow-y-auto p-6 md:p-8 max-w-3xl mx-auto w-full">
         
         {/* Teams */}
-        <div className="grid grid-cols-2 gap-4 mb-8">
-          <div className="bg-zinc-900/50 p-4 rounded-xl border border-zinc-800">
-            <label className="block text-[10px] uppercase tracking-widest text-zinc-500 mb-2 font-bold">First Team Name</label>
-            <input 
-              type="text" 
-              value={teamAName} 
-              onChange={e => setTeamAName(e.target.value)}
-              className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-3 text-lg font-bold text-zinc-100 focus:outline-none focus:border-orange-500 transition-colors"
-            />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+          <div className="bg-zinc-900/50 p-4 rounded-xl border border-zinc-800 flex flex-col gap-4">
+            <div>
+              <label className="block text-[10px] uppercase tracking-widest text-zinc-500 mb-2 font-bold">First Team Name</label>
+              <input 
+                type="text" 
+                value={teamAName} 
+                onChange={e => setTeamAName(e.target.value)}
+                className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-3 text-lg font-bold text-zinc-100 focus:outline-none focus:border-orange-500 transition-colors"
+              />
+            </div>
+            <div className="flex gap-4 items-center">
+              <div className="flex-1">
+                <label className="block text-[10px] uppercase tracking-widest text-zinc-500 mb-2 font-bold">Team Color</label>
+                <input 
+                  type="color" 
+                  value={teamAColor} 
+                  onChange={e => setTeamAColor(e.target.value)}
+                  className="w-full h-10 rounded-lg cursor-pointer bg-zinc-950 border border-zinc-800 p-1"
+                />
+              </div>
+              <div className="flex-1">
+                <label className="block text-[10px] uppercase tracking-widest text-zinc-500 mb-2 font-bold">Team Logo</label>
+                <input type="file" accept="image/*" className="hidden" ref={fileInputARef} onChange={(e) => handleImageUpload(e, setTeamALogo)} />
+                <button 
+                  onClick={() => fileInputARef.current?.click()}
+                  className="w-full bg-zinc-950 border border-zinc-800 rounded-lg h-10 flex items-center justify-center gap-2 text-xs font-bold text-zinc-300 hover:bg-zinc-900 transition-colors"
+                >
+                  <Upload size={14} /> {teamALogo ? 'CHANGE LOGO' : 'UPLOAD LOGO'}
+                </button>
+              </div>
+            </div>
+            {teamALogo && (
+              <div className="flex justify-center">
+                <img src={teamALogo} alt="Team A Logo" className="h-16 w-16 object-contain rounded-md" />
+              </div>
+            )}
           </div>
-          <div className="bg-zinc-900/50 p-4 rounded-xl border border-zinc-800">
-            <label className="block text-[10px] uppercase tracking-widest text-zinc-500 mb-2 font-bold">Second Team Name</label>
-            <input 
-              type="text" 
-              value={teamBName} 
-              onChange={e => setTeamBName(e.target.value)}
-              className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-3 text-lg font-bold text-zinc-100 focus:outline-none focus:border-orange-500 transition-colors"
-            />
+          
+          <div className="bg-zinc-900/50 p-4 rounded-xl border border-zinc-800 flex flex-col gap-4">
+            <div>
+              <label className="block text-[10px] uppercase tracking-widest text-zinc-500 mb-2 font-bold">Second Team Name</label>
+              <input 
+                type="text" 
+                value={teamBName} 
+                onChange={e => setTeamBName(e.target.value)}
+                className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-3 text-lg font-bold text-zinc-100 focus:outline-none focus:border-orange-500 transition-colors"
+              />
+            </div>
+            <div className="flex gap-4 items-center">
+              <div className="flex-1">
+                <label className="block text-[10px] uppercase tracking-widest text-zinc-500 mb-2 font-bold">Team Color</label>
+                <input 
+                  type="color" 
+                  value={teamBColor} 
+                  onChange={e => setTeamBColor(e.target.value)}
+                  className="w-full h-10 rounded-lg cursor-pointer bg-zinc-950 border border-zinc-800 p-1"
+                />
+              </div>
+              <div className="flex-1">
+                <label className="block text-[10px] uppercase tracking-widest text-zinc-500 mb-2 font-bold">Team Logo</label>
+                <input type="file" accept="image/*" className="hidden" ref={fileInputBRef} onChange={(e) => handleImageUpload(e, setTeamBLogo)} />
+                <button 
+                  onClick={() => fileInputBRef.current?.click()}
+                  className="w-full bg-zinc-950 border border-zinc-800 rounded-lg h-10 flex items-center justify-center gap-2 text-xs font-bold text-zinc-300 hover:bg-zinc-900 transition-colors"
+                >
+                  <Upload size={14} /> {teamBLogo ? 'CHANGE LOGO' : 'UPLOAD LOGO'}
+                </button>
+              </div>
+            </div>
+            {teamBLogo && (
+              <div className="flex justify-center">
+                <img src={teamBLogo} alt="Team B Logo" className="h-16 w-16 object-contain rounded-md" />
+              </div>
+            )}
           </div>
         </div>
 

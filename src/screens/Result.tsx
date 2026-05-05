@@ -71,9 +71,24 @@ export default function Result({ onBackHome }: { onBackHome: () => void }) {
     matchData.innings.forEach((inn, idx) => {
         const battingTeam = inn.battingTeamId === matchData.teamA.id ? matchData.teamA : matchData.teamB;
         
+        // Add Team Logo to PDF if exists
+        if (battingTeam.logoDataUrl) {
+           try {
+             doc.addImage(battingTeam.logoDataUrl, 'PNG', 14, yPos - 8, 10, 10);
+             doc.setFontSize(16);
+             doc.text(`${battingTeam.name} Innings`, 28, yPos);
+           } catch(e) {
+             doc.setFontSize(16);
+             doc.text(`${battingTeam.name} Innings`, 14, yPos);
+           }
+        } else {
+           doc.setFontSize(16);
+           doc.text(`${battingTeam.name} Innings`, 14, yPos);
+        }
+        
         doc.setFontSize(16);
-        doc.text(`${battingTeam.name} Innings - ${inn.totalRuns}/${inn.totalWickets} (${Math.floor(inn.totalBalls/6)}.${inn.totalBalls%6} Ov)`, 14, yPos);
-        yPos += 5;
+        doc.text(`${inn.totalRuns}/${inn.totalWickets} (${Math.floor(inn.totalBalls/6)}.${inn.totalBalls%6} Ov)`, 140, yPos);
+        yPos += 8;
 
         // Batting
         const batBody = Object.values(inn.batsmen as Record<string, any>).map(bat => [
@@ -90,7 +105,7 @@ export default function Result({ onBackHome }: { onBackHome: () => void }) {
             head: [['Batter', 'R', 'B', '4s', '6s', 'SR']],
             body: batBody,
             theme: 'grid',
-            headStyles: { fillColor: [234, 88, 12] },
+            headStyles: { fillColor: battingTeam.color || '#ea580c' },
         });
 
         yPos = (doc as any).lastAutoTable.finalY + 10;
@@ -110,7 +125,7 @@ export default function Result({ onBackHome }: { onBackHome: () => void }) {
             head: [['Bowler', 'O', 'M', 'R', 'W', 'ECON']],
             body: bowlBody,
             theme: 'grid',
-            headStyles: { fillColor: [234, 88, 12] },
+            headStyles: { fillColor: battingTeam.color || '#ea580c' },
         });
 
         yPos = (doc as any).lastAutoTable.finalY + 15;
@@ -214,9 +229,13 @@ export default function Result({ onBackHome }: { onBackHome: () => void }) {
            {matchData.innings.map((inn, idx) => {
              const battingTeam = inn.battingTeamId === matchData.teamA.id ? matchData.teamA : matchData.teamB;
              return (
-               <div key={idx} className="bg-zinc-950 border border-zinc-800 text-zinc-100 rounded-3xl overflow-hidden mb-10 shadow-lg">
-                 <div className="bg-zinc-900 p-6 flex justify-between items-center border-b border-zinc-800">
-                    <h3 className="text-xl font-black uppercase tracking-widest text-zinc-100">{battingTeam.name} Innings</h3>
+               <div key={idx} className="bg-zinc-950 border border-zinc-800 text-zinc-100 rounded-3xl overflow-hidden mb-10 shadow-lg relative">
+                 <div className="absolute left-0 top-0 bottom-0 w-2" style={{ backgroundColor: battingTeam.color || '#ea580c' }}></div>
+                 <div className="bg-zinc-900 p-6 flex justify-between items-center border-b border-zinc-800 pl-8">
+                    <div className="flex items-center gap-4">
+                      {battingTeam.logoDataUrl && <img src={battingTeam.logoDataUrl} alt={`${battingTeam.name} logo`} className="w-10 h-10 object-contain rounded-md" />}
+                      <h3 className="text-xl font-black uppercase tracking-widest" style={{ color: battingTeam.color || '#f4f4f5' }}>{battingTeam.name} Innings</h3>
+                    </div>
                     <div className="text-2xl font-mono font-bold text-zinc-100">{inn.totalRuns}<span className="text-zinc-500 font-sans mx-1">/</span>{inn.totalWickets} <span className="text-sm font-sans text-zinc-500 ml-3">({Math.floor(inn.totalBalls/6)}.{inn.totalBalls%6} Ov)</span></div>
                  </div>
                  <div className="p-6">

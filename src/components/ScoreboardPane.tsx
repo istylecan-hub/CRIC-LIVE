@@ -1,10 +1,10 @@
-import { Innings, Player } from '../types';
+import { Innings, Player, Team } from '../types';
 import { formatOvers } from '../core/scoreUtils';
 
 interface Props {
   innings: Innings;
-  battingTeam: { name: string, players: Player[] };
-  bowlingTeam: { name: string, players: Player[] };
+  battingTeam: Team;
+  bowlingTeam: Team;
 }
 
 export default function ScoreboardPane({ innings, battingTeam, bowlingTeam }: Props) {
@@ -31,13 +31,19 @@ export default function ScoreboardPane({ innings, battingTeam, bowlingTeam }: Pr
       {/* Top row: Total Score */}
       <div className="flex justify-between mb-4">
         <div className="flex flex-col">
-           <span className="text-[10px] text-zinc-500 uppercase font-bold tracking-widest mb-1">{battingTeam.name}</span>
+           <div className="flex items-center gap-2 mb-1">
+             {battingTeam.logoDataUrl && <img src={battingTeam.logoDataUrl} alt="logo" className="w-5 h-5 object-contain rounded-sm" />}
+             <span className="text-[10px] uppercase font-bold tracking-widest" style={{ color: battingTeam.color || '#71717a' }}>{battingTeam.name}</span>
+           </div>
            <span className="text-3xl font-mono text-zinc-200 font-bold tracking-tighter">
              {innings.totalRuns}<span className="text-lg text-zinc-500 font-normal ml-1">/ {innings.totalWickets}</span>
            </span>
         </div>
         <div className="text-right flex flex-col items-end">
-           <span className="text-[10px] text-zinc-500 uppercase font-bold tracking-widest mb-1">OVERS</span>
+           <div className="flex items-center gap-2 mb-1">
+             <span className="text-[10px] uppercase font-bold tracking-widest" style={{ color: bowlingTeam.color || '#71717a' }}>OVERS</span>
+             {bowlingTeam.logoDataUrl && <img src={bowlingTeam.logoDataUrl} alt="logo" className="w-5 h-5 object-contain rounded-sm" />}
+           </div>
            <span className="text-3xl font-black font-mono leading-none text-zinc-200">{formatOvers(innings.totalBalls)}</span>
         </div>
       </div>
@@ -45,17 +51,18 @@ export default function ScoreboardPane({ innings, battingTeam, bowlingTeam }: Pr
       {/* Players info grid */}
       <div className="flex-1 grid grid-cols-2 gap-4">
         {/* Batsmen */}
-        <div className="p-3 rounded-lg bg-zinc-900 border border-zinc-800 flex flex-col justify-center">
+        <div className="p-3 rounded-lg bg-zinc-900 border border-zinc-800 flex flex-col justify-center relative overflow-hidden">
+           {battingTeam.color && <div className="absolute left-0 top-0 bottom-0 w-1" style={{ backgroundColor: battingTeam.color }}></div>}
            {striker && (
-             <div className="flex justify-between items-center mb-2">
-               <span className="text-xs text-orange-400 font-bold flex items-center gap-1">
+             <div className="flex justify-between items-center mb-2 pl-2">
+               <span className="text-xs font-bold flex items-center gap-1" style={{ color: battingTeam.color || '#fb923c' }}>
                  ▶ {striker.name}
                </span>
                <span className="text-sm font-mono text-zinc-200">{striker.runs}<span className="text-zinc-500 text-[10px] ml-1">({striker.balls})</span></span>
              </div>
            )}
            {nonStriker && (
-             <div className="flex justify-between items-center opacity-60">
+             <div className="flex justify-between items-center opacity-60 pl-2">
                <span className="text-xs text-zinc-400 flex items-center ml-3">
                  {nonStriker.name}
                </span>
@@ -65,19 +72,20 @@ export default function ScoreboardPane({ innings, battingTeam, bowlingTeam }: Pr
         </div>
 
         {/* Bowler */}
-        <div className="p-3 rounded-lg bg-zinc-900 border border-zinc-800 flex flex-col justify-center">
+        <div className="p-3 rounded-lg bg-zinc-900 border border-zinc-800 flex flex-col justify-center relative overflow-hidden">
+            {bowlingTeam.color && <div className="absolute right-0 top-0 bottom-0 w-1" style={{ backgroundColor: bowlingTeam.color }}></div>}
             {bowler ? (
-              <div className="flex justify-between items-center">
-                <span className="text-xs text-orange-400 font-bold flex items-center gap-1">
+              <div className="flex justify-between items-center pr-2">
+                <span className="text-xs font-bold flex items-center gap-1" style={{ color: bowlingTeam.color || '#fb923c' }}>
                   ▶ {bowler.name}
                 </span>
                 <span className="text-sm font-mono text-zinc-200">{bowler.wickets}-{bowler.runs} <span className="text-zinc-500 text-[10px] ml-1">({formatOvers(bowler.balls)})</span></span>
               </div>
             ) : (
-              <div className="text-zinc-500 text-xs italic ml-3">Selecting Bowler...</div>
+              <div className="text-zinc-500 text-xs italic ml-3 pr-2">Selecting Bowler...</div>
             )}
             
-            <div className="mt-2 flex items-center justify-end gap-1">
+            <div className="mt-2 flex items-center justify-end gap-1 pr-2">
               {lastBalls.length > 0 ? lastBalls : <span className="text-zinc-500 text-[10px] uppercase font-bold tracking-widest mt-1">Start of over</span>}
             </div>
         </div>

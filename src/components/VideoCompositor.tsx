@@ -54,20 +54,38 @@ export default function VideoCompositor() {
                  // Box properties
                  ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
                  ctx.fillRect(30, 30, 500, 90);
+                 
+                 // Accent bar
+                 ctx.fillStyle = battingTeam.color || '#ea580c';
+                 ctx.fillRect(30, 30, 8, 90);
+                 
+                 let textStartX = 50;
+                 
+                 // Logo
+                 if (battingTeam.logoDataUrl) {
+                    const img = new Image();
+                    img.src = battingTeam.logoDataUrl;
+                    // Draw if complete, else wait for next frame
+                    if (img.complete) {
+                       ctx.drawImage(img, 45, 43, 36, 36);
+                    }
+                    textStartX = 95;
+                 }
+                 
                  ctx.fillStyle = 'white';
                  ctx.font = 'bold 36px monospace';
-                 ctx.fillText(`${battingTeam.name} ${inn.totalRuns}/${inn.totalWickets}`, 50, 70);
+                 ctx.fillText(`${battingTeam.name} ${inn.totalRuns}/${inn.totalWickets}`, textStartX, 70);
                  
                  ctx.fillStyle = '#ffb703'; // nice orange
                  // Overs
-                 ctx.fillText(`(${formatOvers(inn.totalBalls)})`, 340, 70);
+                 ctx.fillText(`(${formatOvers(inn.totalBalls)})`, textStartX + 290, 70);
                  
                  ctx.fillStyle = '#ffffff';
                  ctx.font = '20px sans-serif';
-                 ctx.fillText(`${striker?.name || '-'} ${striker?.runs||0}*  |  ${nonStriker?.name || '-'} ${nonStriker?.runs||0}`, 50, 105);
+                 ctx.fillText(`${striker?.name || '-'} ${striker?.runs||0}*  |  ${nonStriker?.name || '-'} ${nonStriker?.runs||0}`, textStartX, 105);
                  
                  ctx.fillStyle = '#8E9299'; // subtle text
-                 ctx.fillText(`|  ${bowler?.name || '-'} ${bowler?.wickets||0}-${bowler?.runs||0}`, 350, 105);
+                 ctx.fillText(`|  ${bowler?.name || '-'} ${bowler?.wickets||0}-${bowler?.runs||0}`, textStartX + 300, 105);
                }
              }
           }

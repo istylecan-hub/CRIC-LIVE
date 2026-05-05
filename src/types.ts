@@ -67,11 +67,19 @@ export interface Innings {
   isComplete: boolean;
 }
 
+export interface Team {
+  id: string;
+  name: string;
+  players: Player[];
+  color?: string;
+  logoDataUrl?: string; // Base64 encoding of image
+}
+
 export interface Match {
   id: string;
   date: string; // ISO
-  teamA: { id: string; name: string; players: Player[] };
-  teamB: { id: string; name: string; players: Player[] };
+  teamA: Team;
+  teamB: Team;
   overs: MatchFormat;
   mode: MatchMode;
   toss: { winnerTeamId: string; choice: "bat" | "bowl" };
